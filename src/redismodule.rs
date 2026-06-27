@@ -172,6 +172,34 @@ impl ValkeyString {
         Self { ctx, inner }
     }
 
+    /// Create a `len`-byte, zero-filled, context-independent string (CreateString with a NULL buffer
+    /// and NULL context). It is NOT auto-memory-managed, so it survives past the current command —
+    /// the caller owns it and must `FreeString` (or commit it into the keyspace). Use as a writable,
+    /// off-keyspace destination buffer (see [`Self::as_mut_slice`]) to DMA into before committing it
+    /// with [`crate::key::ValkeyKeyWritable::set`].
+    #[must_use]
+    pub fn create_uninitialized(len: usize) -> Self {
+        let inner =
+            unsafe { raw::RedisModule_CreateString.unwrap()(ptr::null_mut(), ptr::null(), len) };
+        Self {
+            ctx: ptr::null_mut(),
+            inner,
+        }
+    }
+
+    /// A mutable view of the string's buffer.
+    ///
+    /// # Safety / soundness
+    /// Only sound when this module exclusively owns the string (e.g. a fresh
+    /// [`Self::create_uninitialized`] not yet shared into the keyspace). After the value is shared
+    /// (`StringSet`, refcount > 1), do not mutate it.
+    #[must_use]
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        let mut len: libc::size_t = 0;
+        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
+        unsafe { slice::from_raw_parts_mut(bytes.cast::<u8>().cast_mut(), len) }
+    }
+
     /// Creates a ValkeyString from a &str and retains it.  This is useful in cases where Modules need to pass ownership of a ValkeyString to the core engine without it being freed when we drop a ValkeyString
     pub fn create_and_retain(arg: &str) -> ValkeyString {
         let arg = ValkeyString::create(None, arg);

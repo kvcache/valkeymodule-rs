@@ -134,6 +134,28 @@ impl ValkeyKey {
         }
     }
 
+    /// Create an owned [`ValkeyString`] referencing this key's value, sharing the key's buffer with
+    /// no copy. The returned string holds a reference to the value, so its bytes stay alive at a
+    /// stable address even after the command returns or the key is later modified/deleted — useful
+    /// for reading the value on a background thread. Returns `None` if the key is empty, is not a
+    /// string, or the running server does not export `CreateStringReferenceFromKey` (in which case
+    /// the caller should fall back to copying the bytes).
+    pub fn retained_string_value(&self) -> Option<ValkeyString> {
+        if self.is_null() {
+            return None;
+        }
+        let inner = raw::create_string_reference_from_key(self.key_inner);
+        if inner.is_null() {
+            None
+        } else {
+            // ctx = null: the retained string is context-independent and freed via FreeString(null).
+            Some(ValkeyString::from_redis_module_string(
+                std::ptr::null_mut(),
+                inner,
+            ))
+        }
+    }
+
     pub fn hash_get(&self, field: &str) -> Result<Option<ValkeyString>, ValkeyError> {
         let val = if self.is_null() {
             None
@@ -357,6 +379,16 @@ impl ValkeyKeyWritable {
     pub fn write(&self, val: &str) -> ValkeyResult {
         let val_str = ValkeyString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {
+            raw::Status::Ok => VALKEY_OK,
+            raw::Status::Err => Err(ValkeyError::Str("Error while setting key")),
+        }
+    }
+
+    /// Set the key's value to `value` with no copy: `StringSet` retains the value object and shares
+    /// it into the keyspace. Use to commit a module-owned string (e.g. one DMA'd into via
+    /// [`ValkeyString::create_uninitialized`]) without copying its bytes.
+    pub fn set(&self, value: &ValkeyString) -> ValkeyResult {
+        match raw::string_set(self.key_inner, value.inner) {
             raw::Status::Ok => VALKEY_OK,
             raw::Status::Err => Err(ValkeyError::Str("Error while setting key")),
         }

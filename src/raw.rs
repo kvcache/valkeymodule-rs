@@ -515,6 +515,18 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits()) }
 }
 
+/// Create a module-string reference to `key`'s value, sharing its buffer (no copy), or null if the
+/// value is absent/not a string, or if the running server does not export
+/// `CreateStringReferenceFromKey` (older servers): the caller should fall back to copying in that case.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn create_string_reference_from_key(key: *mut RedisModuleKey) -> *mut RedisModuleString {
+    match unsafe { RedisModule_CreateStringReferenceFromKey } {
+        Some(create_string_reference_from_key) => unsafe { create_string_reference_from_key(key) },
+        None => std::ptr::null_mut(),
+    }
+}
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_truncate(key: *mut RedisModuleKey, new_len: size_t) -> Status {

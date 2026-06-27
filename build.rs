@@ -90,4 +90,12 @@ fn main() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("failed to write bindings to file");
+
+    // Regenerate when the vendored headers or the cc stubs change; otherwise cargo caches the
+    // bindgen output and edits to the headers (e.g. a new module API) are silently ignored.
+    println!("cargo:rerun-if-changed=src/include/redismodule.h");
+    println!("cargo:rerun-if-changed=src/include/valkeymodule.h");
+    println!("cargo:rerun-if-changed=src/redismodule.c");
+    println!("cargo:rerun-if-changed=src/valkeymodule.c");
+    println!("cargo:rerun-if-changed=build.rs");
 }

@@ -1014,6 +1014,7 @@ REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromDouble)(RedisM
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromString)(RedisModuleCtx *ctx, const RedisModuleString *str) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromStreamID)(RedisModuleCtx *ctx, const RedisModuleStreamID *id) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringPrintf)(RedisModuleCtx *ctx, const char *fmt, ...) REDISMODULE_ATTR_PRINTF(2,3) REDISMODULE_ATTR;
+REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringReferenceFromKey)(RedisModuleKey *key) REDISMODULE_ATTR;
 REDISMODULE_API void (*RedisModule_FreeString)(RedisModuleCtx *ctx, RedisModuleString *str) REDISMODULE_ATTR;
 REDISMODULE_API const char * (*RedisModule_StringPtrLen)(const RedisModuleString *str, size_t *len) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_ReplyWithError)(RedisModuleCtx *ctx, const char *err) REDISMODULE_ATTR;
@@ -1409,6 +1410,7 @@ static void RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(CreateStringFromString);
     REDISMODULE_GET_API(CreateStringFromStreamID);
     REDISMODULE_GET_API(CreateStringPrintf);
+    REDISMODULE_GET_API(CreateStringReferenceFromKey);
     REDISMODULE_GET_API(FreeString);
     REDISMODULE_GET_API(StringPtrLen);
     REDISMODULE_GET_API(AutoMemory);
