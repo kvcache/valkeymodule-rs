@@ -11,14 +11,14 @@ use std::os::raw::c_int;
 
 use raw::KeyType;
 
+use crate::ValkeyError;
+use crate::ValkeyResult;
+use crate::ValkeyString;
 use crate::native_types::ValkeyType;
 use crate::raw;
 use crate::redismodule::VALKEY_OK;
 pub use crate::redisraw::bindings::*;
 use crate::stream::StreamIterator;
-use crate::ValkeyError;
-use crate::ValkeyResult;
-use crate::ValkeyString;
 use bitflags::bitflags;
 
 /// `ValkeyKey` is an abstraction over a Valkey key that allows readonly
@@ -267,12 +267,6 @@ impl ValkeyKeyWritable {
 
     pub fn as_string_dma(&self) -> Result<StringDMA<'_>, ValkeyError> {
         StringDMA::new(self)
-    }
-
-    /// Size this key's string value to `length` bytes and return an owned, writable DMA view.
-    /// Consumes the key handle so the returned view can be moved or returned freely.
-    pub fn reserve(self, length: usize) -> Result<OwnedStringDMA, ValkeyError> {
-        OwnedStringDMA::new(self, length)
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -654,69 +648,6 @@ impl<'a> StringDMA<'a> {
         }
         self.buffer[current_len..new_len].copy_from_slice(data);
         Ok(self)
-    }
-}
-
-/// A writable DMA view that OWNS its key handle.
-///
-/// Unlike [`StringDMA`], which borrows the key (and so cannot be returned without a self-referential
-/// struct), this owns the [`ValkeyKeyWritable`] and can be moved or returned. The value buffer is
-/// sized once at construction via `StringTruncate`; [`OwnedStringDMA::as_mut_slice`] exposes
-/// valkey's own memory for zero-copy writes.
-pub struct OwnedStringDMA {
-    // Held to keep the key open for the lifetime of the buffer pointer; closed on drop.
-    _key: ValkeyKeyWritable,
-    buffer: *mut u8,
-    length: usize,
-}
-
-impl OwnedStringDMA {
-    fn new(key: ValkeyKeyWritable, length: usize) -> Result<Self, ValkeyError> {
-        if raw::Status::Ok != raw::string_truncate(key.key_inner, length) {
-            return Err(ValkeyError::Str("Failed to truncate string"));
-        }
-        let mut actual: size_t = 0;
-        let dma = raw::string_dma(key.key_inner, &mut actual, raw::KeyMode::WRITE);
-        if dma.is_null() {
-            return Err(ValkeyError::Str("Could not access key buffer"));
-        }
-        Ok(Self {
-            _key: key,
-            buffer: dma.cast::<u8>(),
-            length: actual,
-        })
-    }
-
-    /// valkey's own value buffer, for zero-copy writes.
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
-        unsafe { std::slice::from_raw_parts_mut(self.buffer, self.length) }
-    }
-
-    /// valkey's own value buffer, read-only.
-    #[must_use]
-    pub fn as_slice(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.buffer, self.length) }
-    }
-
-    /// Number of bytes in the value buffer.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.length
-    }
-
-    /// Whether the value buffer is empty.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.length == 0
-    }
-}
-
-impl std::fmt::Debug for OwnedStringDMA {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("OwnedStringDMA")
-            .field("length", &self.length)
-            .finish()
     }
 }
 
