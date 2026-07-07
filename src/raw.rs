@@ -7,7 +7,7 @@ extern crate libc;
 extern crate num_traits;
 
 use std::cmp::Ordering;
-use std::ffi::{c_ulonglong, CStr, CString};
+use std::ffi::{CStr, CString, c_ulonglong};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong, c_void};
 use std::ptr;
 use std::slice;
@@ -20,7 +20,7 @@ use num_traits::FromPrimitive;
 
 use crate::error::Error;
 pub use crate::redisraw::bindings::*;
-use crate::{context::StrCallArgs, Context, ValkeyString};
+use crate::{Context, ValkeyString, context::StrCallArgs};
 use crate::{RedisBuffer, ValkeyError};
 
 const GENERIC_ERROR_MESSAGE: &str = "Generic error.";
@@ -704,6 +704,17 @@ pub fn string_to_double(s: *const RedisModuleString, len: *mut f64) -> Status {
 #[inline]
 pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
+}
+
+/// Move `s` into `key` without copying, transferring ownership. `s` must be uniquely owned.
+/// On `Status::Ok` it has been moved into the keyspace and must not be freed or otherwise
+/// used again.
+/// Returns `Status::Err` (leaving `s` untouched) if it is shared or the key isn't writable.
+/// See valkey's `ValkeyModule_StringSetMove`.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn string_set_move(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
+    unsafe { RedisModule_StringSetMove.unwrap()(key, s).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]

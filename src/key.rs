@@ -378,13 +378,34 @@ impl ValkeyKeyWritable {
         }
     }
 
-    /// Set the key's value to `value` with no copy: `StringSet` retains the value object and shares
-    /// it into the keyspace. Use to commit a module-owned string (e.g. one DMA'd into via
-    /// [`ValkeyString::create_uninitialized`]) without copying its bytes.
+    /// Set the key's value to `value`.
+    ///
+    /// Note that this copies the value's bytes into the keyspace.
+    ///
+    /// To commit a large module-owned buffer without a copy, use [`Self::set_move`].
     pub fn set(&self, value: &ValkeyString) -> ValkeyResult {
         match raw::string_set(self.key_inner, value.inner) {
             raw::Status::Ok => VALKEY_OK,
             raw::Status::Err => Err(ValkeyError::Str("Error while setting key")),
+        }
+    }
+
+    /// Set the key's value to `value`.
+    ///
+    /// This moves the value's bytes.
+    ///
+    /// `value` must be uniquely owned, `refCount = 1`. On success the keyspace owns the value.
+    /// On error (e.g. `value` is shared, or the key isn't writable) the key is left unchanged
+    /// and `value` is dropped/freed normally. See valkey's `ValkeyModule_StringSetMove`.
+    pub fn set_move(&self, value: ValkeyString) -> ValkeyResult {
+        match raw::string_set_move(self.key_inner, value.inner) {
+            raw::Status::Ok => {
+                // Moved into the keyspace (its object shell was freed inside StringSetMove); skip
+                // our Drop so we don't FreeString an object we no longer own.
+                std::mem::forget(value);
+                VALKEY_OK
+            }
+            raw::Status::Err => Err(ValkeyError::Str("Error while moving value into key")),
         }
     }
 

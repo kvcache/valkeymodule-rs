@@ -1007,6 +1007,7 @@ REDISMODULE_API RedisModuleCallReply * (*RedisModule_CallReplyAttribute)(RedisMo
 REDISMODULE_API size_t (*RedisModule_CallReplyLength)(RedisModuleCallReply *reply) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleCallReply * (*RedisModule_CallReplyArrayElement)(RedisModuleCallReply *reply, size_t idx) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateString)(RedisModuleCtx *ctx, const char *ptr, size_t len) REDISMODULE_ATTR;
+REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringUninitialized)(RedisModuleCtx *ctx, size_t len) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromLongLong)(RedisModuleCtx *ctx, long long ll) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromULongLong)(RedisModuleCtx *ctx, unsigned long long ull) REDISMODULE_ATTR;
 REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromDouble)(RedisModuleCtx *ctx, double d) REDISMODULE_ATTR;
@@ -1056,6 +1057,7 @@ REDISMODULE_API RedisModuleString * (*RedisModule_CreateStringFromCallReply)(Red
 REDISMODULE_API int (*RedisModule_DeleteKey)(RedisModuleKey *key) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_UnlinkKey)(RedisModuleKey *key) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_StringSet)(RedisModuleKey *key, RedisModuleString *str) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_StringSetMove)(RedisModuleKey *key, RedisModuleString *str) REDISMODULE_ATTR;
 REDISMODULE_API char * (*RedisModule_StringDMA)(RedisModuleKey *key, size_t *len, int mode) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_StringTruncate)(RedisModuleKey *key, size_t newlen) REDISMODULE_ATTR;
 REDISMODULE_API mstime_t (*RedisModule_GetExpire)(RedisModuleKey *key) REDISMODULE_ATTR;
@@ -1403,6 +1405,7 @@ static void RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(CallReplyStringPtr);
     REDISMODULE_GET_API(CreateStringFromCallReply);
     REDISMODULE_GET_API(CreateString);
+    REDISMODULE_GET_API(CreateStringUninitialized);
     REDISMODULE_GET_API(CreateStringFromLongLong);
     REDISMODULE_GET_API(CreateStringFromULongLong);
     REDISMODULE_GET_API(CreateStringFromDouble);
@@ -1419,6 +1422,7 @@ static void RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(DeleteKey);
     REDISMODULE_GET_API(UnlinkKey);
     REDISMODULE_GET_API(StringSet);
+    REDISMODULE_GET_API(StringSetMove);
     REDISMODULE_GET_API(StringDMA);
     REDISMODULE_GET_API(StringTruncate);
     REDISMODULE_GET_API(GetExpire);

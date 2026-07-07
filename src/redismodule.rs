@@ -4,7 +4,7 @@ use std::ffi::CString;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
-use std::ptr::{null_mut, NonNull};
+use std::ptr::{NonNull, null_mut};
 use std::slice;
 use std::str;
 use std::str::Utf8Error;
@@ -172,15 +172,15 @@ impl ValkeyString {
         Self { ctx, inner }
     }
 
-    /// Create a `len`-byte, zero-filled, context-independent string (CreateString with a NULL buffer
-    /// and NULL context). It is NOT auto-memory-managed, so it survives past the current command —
-    /// the caller owns it and must `FreeString` (or commit it into the keyspace). Use as a writable,
-    /// off-keyspace destination buffer (see [`Self::as_mut_slice`]) to DMA into before committing it
-    /// with [`crate::key::ValkeyKeyWritable::set`].
+    /// Create a `len`-byte, context-independent string whose contents are uninitialized garbage.
+    ///
+    /// It is not auto-memory-managed, so it survives past the current command — the caller owns it
+    /// and must `FreeString` (or commit it into the keyspace). Use as a writable, off-keyspace
+    /// destination buffer.
     #[must_use]
     pub fn create_uninitialized(len: usize) -> Self {
         let inner =
-            unsafe { raw::RedisModule_CreateString.unwrap()(ptr::null_mut(), ptr::null(), len) };
+            unsafe { raw::RedisModule_CreateStringUninitialized.unwrap()(ptr::null_mut(), len) };
         Self {
             ctx: ptr::null_mut(),
             inner,
